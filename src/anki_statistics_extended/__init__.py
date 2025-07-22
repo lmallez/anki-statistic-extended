@@ -11,22 +11,33 @@ from aqt.qt import QTimer
 STATUS_ORDER: List[str] = [
     "New",
     "Learning",
-    "Consolidating",
+    "Relearning",
+    "Young",
     "Mature",
-    "Trouble",
 ]
 
+COLOR_MAP = {
+    "New": "#5CADDE",         # Light Blue
+    "Learning": "#F58C2E",    # Orange
+    "Relearning": "#EF5A3C",  # Red-Orange
+    "Young": "#66C667",       # Light Green
+    "Mature": "#059849",      # Dark Green
+}
 
 def card_status(card) -> str | None:
-    if card.ivl == 0:
+    if card.type == 0:  # New card
         return "New"
-    if card.lapses >= 3:
-        return "Trouble"
-    if card.ivl <= 7:
-        return "Learning"
-    if 8 <= card.ivl <= 30:
-        return "Consolidating"
-    return "Mature"
+    if card.type == 1:  # Learning
+        if card.queue in (0, 1):
+            return "Learning"
+        elif card.queue == 3:
+            return "Relearning"
+    if card.type == 2:  # Review
+        if card.ivl < 21:
+            return "Young"
+        else:
+            return "Mature"
+    return None
 
 
 def build_tag_counts() -> Dict[str, Dict[str, int]]:
@@ -42,7 +53,6 @@ def build_tag_counts() -> Dict[str, Dict[str, int]]:
 
 
 def _build_js_payload() -> str:
-    """Return a self-executing JS snippet that draws the stacked bar with Plotly."""
     data = build_tag_counts()
     if not data:
         return ""
@@ -57,20 +67,19 @@ def _build_js_payload() -> str:
   const rows = JSON.parse('{payload}');
   const TAGS = Object.keys(rows).sort();
   const COLORS = {{
-    Mature:'#4bc0c0',
-    Young:'#9966ff',
-    Relearning:'#ffce56',
-    Learning:'#36a2eb',
-    New:'#ff6384',
-    Buried:'#c9cbcf',
-    Suspended:'#ff9f40'
+    New: '{COLOR_MAP["New"]}',
+    Learning: '{COLOR_MAP["Learning"]}',
+    Relearning: '{COLOR_MAP["Relearning"]}',
+    Young: '{COLOR_MAP["Young"]}',
+    Mature: '{COLOR_MAP["Mature"]}',
   }};
-  const traces = Object.fromEntries(Object.keys(COLORS).map(k => [k, {{type:'bar', x:TAGS, y:[], name:k, marker:{{color:COLORS[k]}}}}]));
+  const STACK_ORDER = ["Mature", "Young", "Relearning", "Learning", "New"];
+  const traces = Object.fromEntries(STACK_ORDER.map(k => [k, {{type:'bar', x:TAGS, y:[], name:k, marker:{{color:COLORS[k]}}}}]));
   TAGS.forEach(t => {{
     const rec = rows[t];
     Object.keys(COLORS).forEach(k => traces[k].y.push(rec[k] || 0));
   }});
-  const dataArr = Object.values(traces).filter(t => t.y.some(v => v));
+  const dataArr = STACK_ORDER.map(k => traces[k]).filter(t => t.y.some(v => v));
   if (!dataArr.length) return;
 
   function draw() {{
