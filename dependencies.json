@@ -1,0 +1,7 @@
+{
+    "plotly": {
+        "version": "2.27.0",
+        "url": "https://cdn.plot.ly/plotly-{version}.min.js",
+        "destination": "web/plotly.min.js"
+    }
+}

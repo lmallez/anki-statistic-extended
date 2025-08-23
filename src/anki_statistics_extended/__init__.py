@@ -4,9 +4,9 @@ import json
 from collections import defaultdict
 from typing import Dict, List
 
-from aqt import mw
 from aqt.gui_hooks import stats_dialog_will_show
 from aqt.qt import QTimer
+from aqt import mw
 
 STATUS_ORDER: List[str] = [
     "New",
@@ -53,6 +53,10 @@ def build_tag_counts() -> Dict[str, Dict[str, int]]:
 
 
 def _build_js_payload() -> str:
+    mw.addonManager.setWebExports(__name__, r"web/.*(js|css)")
+    addon_pkg = mw.addonManager.addonFromModule(__name__)
+    plotly_url = f"/_addons/{addon_pkg}/web/plotly.min.js"
+
     data = build_tag_counts()
     if not data:
         return ""
@@ -103,7 +107,7 @@ def _build_js_payload() -> str:
     draw();
   }} else {{
     const s = document.createElement('script');
-    s.src = 'https://cdn.plot.ly/plotly-2.27.0.min.js';
+    s.src = '{plotly_url}';
     s.onload = draw;
     document.head.appendChild(s);
   }}
