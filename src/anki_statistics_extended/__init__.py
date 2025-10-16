@@ -9,6 +9,7 @@ from aqt.gui_hooks import stats_dialog_will_show
 from aqt.qt import QTimer
 
 STATUS_ORDER: List[str] = [
+    "Suspended",
     "New",
     "Learning",
     "Relearning",
@@ -17,6 +18,7 @@ STATUS_ORDER: List[str] = [
 ]
 
 COLOR_MAP = {
+    "Suspended": "#808080",
     "New": "#5CADDE",
     "Learning": "#F58C2E",
     "Relearning": "#EF5A3C",
@@ -26,15 +28,20 @@ COLOR_MAP = {
 
 
 def card_status(card) -> str | None:
-    if card.type == 0:
+    q = getattr(card, "queue", None)
+    t = getattr(card, "type", None)
+    ivl = getattr(card, "ivl", 0) or 0
+
+    if q == -1:
+        return "Suspended"
+    if t == 0 or q == 0:
         return "New"
-    if card.type == 1:
-        if card.queue in (0, 1):
-            return "Learning"
-        elif card.queue == 3:
-            return "Relearning"
-    if card.type == 2:
-        return "Young" if card.ivl < 21 else "Mature"
+    if t == 3:
+        return "Relearning"
+    if t == 1 or q in (1, 3):
+        return "Learning"
+    if t == 2:
+        return "Mature" if ivl >= 21 else "Young"
     return None
 
 
@@ -73,7 +80,8 @@ def create_plotly_chart_config(data: dict) -> str:
       x: TAGS,
       y: [],
       name: k,
-      marker: {{color: COLORS[k]}}
+      marker: {{color: COLORS[k]}},
+      visible: k === 'Suspended' ? 'legendonly' : true
     }}])
   );
   
