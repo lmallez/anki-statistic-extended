@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import defaultdict
 from typing import Dict, List
 
@@ -25,6 +26,16 @@ COLOR_MAP = {
     "Young": "#66C667",
     "Mature": "#059849",
 }
+
+cfg = mw.addonManager.getConfig(__name__)
+_tag_filter_regex = cfg.get("tag_filter_regex")
+_TAG_FILTER_REGEX = re.compile(_tag_filter_regex) if _tag_filter_regex else None
+
+
+def is_level_tag(tag: str) -> bool:
+    if _TAG_FILTER_REGEX is None:
+        return True
+    return bool(_TAG_FILTER_REGEX.match(tag))
 
 
 def card_status(card) -> str | None:
@@ -51,8 +62,9 @@ def build_tag_counts() -> Dict[str, Dict[str, int]]:
         card = mw.col.get_card(cid)
         status = card_status(card)
         if status:
-            for tag in card.note().tags or ["(untagged)"]:
-                counts[tag][status] += 1
+            for tag in card.note().tags or []:
+                if is_level_tag(tag):
+                    counts[tag][status] += 1
     return counts
 
 
