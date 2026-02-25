@@ -68,6 +68,159 @@ def build_tag_counts() -> Dict[str, Dict[str, int]]:
     return counts
 
 
+def build_due_today_counts() -> Dict[str, Dict[str, int]]:
+    """Return per-tag counts for today's workload/progress.
+
+    Outputs per tag:
+    - "ReviewedToday": cards answered today (any rating), within the current deck.
+    - "ReviewRemaining": non-new cards due today (`is:due -is:new`) in the current deck.
+    - "New": new cards, capped to the deck's remaining "new/day" limit.
+
+    Notes:
+    - "ReviewedToday" is computed from revlog entries between today's day start and day cutoff.
+    - "ReviewRemaining" includes review cards due today and also learning/relearning cards due now.
+    """
+
+    counts = defaultdict(lambda: {"ReviewedToday": 0, "ReviewRemaining": 0, "New": 0})
+
+    # Remaining new limit for today (after what you've already introduced today).
+    # `sched.counts()` respects per-deck limits.
+    try:
+        remaining_new = int(mw.col.sched.counts()[0])
+    except Exception:
+        remaining_new = 10 ** 9
+
+    # Collect new cards, sort by due (Anki's usual new-card order), then cap.
+    new_cards = []
+    for cid in mw.col.find_cards("deck:current is:new"):
+        new_cards.append(mw.col.get_card(cid))
+
+    new_cards.sort(key=lambda c: getattr(c, "due", 0) or 0)
+    if remaining_new < len(new_cards):
+        new_cards = new_cards[: max(0, remaining_new)]
+
+    for card in new_cards:
+        note = card.note()
+        for tag in note.tags or []:
+            if is_level_tag(tag):
+                counts[tag]["New"] += 1
+
+    # Remaining reviews due today (includes learning/relearning due now)
+    for cid in mw.col.find_cards("deck:current is:due -is:new"):
+        card = mw.col.get_card(cid)
+        note = card.note()
+        for tag in note.tags or []:
+            if is_level_tag(tag):
+                counts[tag]["ReviewRemaining"] += 1
+
+    # Reviewed today: count unique cards with a revlog entry today, restricted to current deck.
+    try:
+        cutoff_s = int(getattr(mw.col.sched, "day_cutoff", 0) or 0)
+        start_s = cutoff_s - 86400
+        start_ms = start_s * 1000
+        cutoff_ms = cutoff_s * 1000
+
+        reviewed_cids = {
+            row[0]
+            for row in mw.col.db.all(
+                "select distinct cid from revlog where id >= ? and id < ?",
+                start_ms,
+                cutoff_ms,
+            )
+        }
+
+        deck_cids = set(mw.col.find_cards("deck:current"))
+        reviewed_cids &= deck_cids
+
+        for cid in reviewed_cids:
+            card = mw.col.get_card(cid)
+            note = card.note()
+            for tag in note.tags or []:
+                if is_level_tag(tag):
+                    counts[tag]["ReviewedToday"] += 1
+    except Exception:
+        # If anything fails (revlog schema/field differences), just omit this series.
+        pass
+
+    return counts
+
+
+def create_due_plotly_chart_config(data: dict) -> str:
+    """Stacked bar chart of due-today counts by tag (New vs Review)."""
+    mw.addonManager.setWebExports(__name__, r"web/.*(js|css)")
+    addon_pkg = mw.addonManager.addonFromModule(__name__)
+    plotly_url = f"/_addons/{addon_pkg}/web/plotly.min.js"
+
+    if not data:
+        return ""
+
+    payload = json.dumps(data).replace("\\", "\\\\").replace("'", "\\'")
+
+    return f"""(function() {{
+  const rows = JSON.parse('{payload}');
+
+  const TAGS = Object.keys(rows)
+    .filter(t => (rows[t].New || 0) + (rows[t].ReviewRemaining || 0) + (rows[t].ReviewedToday || 0) > 0)
+    .sort((a, b) => a.localeCompare(b));
+
+  if (!TAGS.length) return;
+
+  // Prevent duplicate injection if stats dialog rerenders
+  const existing = document.getElementById('anki-tag-due-plotly');
+  if (existing) existing.remove();
+
+  function draw() {{
+    const container = document.createElement('div');
+    container.id = 'anki-tag-due-plotly';
+    container.style.maxWidth = '900px';
+    container.style.margin = '1.25rem auto 0 auto';
+    document.body.prepend(container);
+
+    const reviewedY = TAGS.map(t => (rows[t].ReviewedToday || 0));
+    const remainingY = TAGS.map(t => (rows[t].ReviewRemaining || 0));
+    const newY = TAGS.map(t => (rows[t].New || 0));
+
+    const dataArr = [
+      {{ type: 'bar', x: TAGS, y: reviewedY, name: 'ReviewedToday', marker: {{ color: '#2ca02c' }} }},
+      {{ type: 'bar', x: TAGS, y: remainingY, name: 'ReviewRemaining', marker: {{ color: '#1f3b87' }} }},
+      {{ type: 'bar', x: TAGS, y: newY, name: 'New', marker: {{ color: '#1f77b4' }} }},
+    ];
+
+    Plotly.newPlot(container, dataArr, {{
+      barmode: 'stack',
+      title: 'Today by Tag (reviewed, remaining, new)',
+      margin: {{ t: 50, l: 40, r: 20, b: 120 }},
+      xaxis: {{ tickangle: -90 }},
+    }}, {{displayModeBar: false}});
+
+    container.on('plotly_click', function(eventData) {{
+      const pt = eventData.points[0];
+      const tag = pt.x;
+      const series = (pt.data && pt.data.name) ? pt.data.name : '';
+
+      if (series === 'New') {{
+        window.pycmd('browser?search=' + encodeURIComponent(`deck:current tag:"${{tag}}" is:new`));
+      }} else if (series === 'ReviewRemaining') {{
+        window.pycmd('browser?search=' + encodeURIComponent(`deck:current tag:"${{tag}}" is:due -is:new`));
+      }} else if (series === 'ReviewedToday') {{
+        window.pycmd('browser?search=' + encodeURIComponent(`deck:current tag:"${{tag}}" rated:1`));
+      }} else {{
+        window.pycmd('browser?search=' + encodeURIComponent(`deck:current tag:"${{tag}}" (rated:1 OR is:due -is:new OR is:new)`));
+      }}
+    }});
+  }}
+
+  if (window.Plotly) {{
+    draw();
+  }} else {{
+    const s = document.createElement('script');
+    s.src = '{plotly_url}';
+    s.onload = draw;
+    document.head.appendChild(s);
+  }}
+}})();"""
+
+
 def create_plotly_chart_config(data: dict) -> str:
     mw.addonManager.setWebExports(__name__, r"web/.*(js|css)")
     addon_pkg = mw.addonManager.addonFromModule(__name__)
@@ -85,7 +238,7 @@ def create_plotly_chart_config(data: dict) -> str:
   const TAGS = Object.keys(rows).sort();
   const COLORS = JSON.parse('{colors_json}');
   const STACK_ORDER = {stack_order};
-  
+
   const traces = Object.fromEntries(
     STACK_ORDER.map(k => [k, {{
       type: 'bar',
@@ -96,12 +249,12 @@ def create_plotly_chart_config(data: dict) -> str:
       visible: k === 'Suspended' ? 'legendonly' : true
     }}])
   );
-  
+
   TAGS.forEach(t => {{
     const rec = rows[t];
     Object.keys(COLORS).forEach(k => traces[k].y.push(rec[k] || 0));
   }});
-  
+
   const dataArr = STACK_ORDER.map(k => traces[k]).filter(t => t.y.some(v => v));
   if (!dataArr.length) return;
 
@@ -110,12 +263,12 @@ def create_plotly_chart_config(data: dict) -> str:
     container.style.maxWidth = '900px';
     container.style.margin = '2rem auto';
     document.body.prepend(container);
-    
+
     Plotly.newPlot(container, dataArr, {{
       barmode: 'stack',
       title: 'Card Status by Tag (stacked)'
     }});
-    
+
     container.on('plotly_click', function(eventData) {{
       const pt = eventData.points[0];
       const tag = pt.x;
@@ -136,9 +289,15 @@ def create_plotly_chart_config(data: dict) -> str:
 
 
 def inject_chart(web):
-    js = create_plotly_chart_config(build_tag_counts())
-    if js:
-        web.eval(js)
+    # 1) Due-today stacked chart
+    due_js = create_due_plotly_chart_config(build_due_today_counts())
+    if due_js:
+        web.eval(due_js)
+
+    # 2) Existing stacked status chart
+    chart_js = create_plotly_chart_config(build_tag_counts())
+    if chart_js:
+        web.eval(chart_js)
 
 
 def inject_with_retry(dlg, attempt=0):
