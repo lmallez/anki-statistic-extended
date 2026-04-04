@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from ..collection import STATUS_COLORS, STATUS_ORDER, card_status, compiled_tag_filter, iter_card_level_tags
+from ..collection import STATUS_COLORS, STATUS_ORDER, card_status, compiled_tag_filter, iter_card_level_tags, sort_tags
 from .base import PlotlyChart, to_js
 
 
@@ -31,7 +31,7 @@ class CardStatusChart(PlotlyChart[dict[str, dict[str, int]]]):
     def build_render_js(self, data: dict[str, dict[str, int]]) -> str:
         return f"""
 const rows = {to_js(data)};
-const tags = Object.keys(rows).sort();
+const tags = {to_js(sort_tags(data.keys()))};
 const colors = {to_js(STATUS_COLORS)};
 const stackOrder = {to_js(list(reversed(STATUS_ORDER)))};
 
@@ -57,15 +57,10 @@ const dataArr = stackOrder
 
 if (!dataArr.length) return;
 
-const container = document.createElement('div');
-container.id = CONTAINER_ID;
-container.style.maxWidth = '900px';
-container.style.margin = '2rem auto';
-document.body.prepend(container);
-
 Plotly.newPlot(container, dataArr, {{
   barmode: 'stack',
   title: 'Card Status by Tag',
+  height: 320,
   margin: {{ t: 50, l: 40, r: 20, b: 120 }},
   xaxis: {{ tickangle: -90 }},
 }}, {{ displayModeBar: false }});

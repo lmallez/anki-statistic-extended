@@ -39,6 +39,15 @@ def is_level_tag(tag: str, *, tag_pattern: Pattern[str] | None = None) -> bool:
     return bool(pattern.match(tag))
 
 
+def tag_sort_key(tag: str) -> tuple[tuple[int, int | str], ...]:
+    parts = re.findall(r"\d+|[^\d]+", tag.casefold())
+    return tuple((0, int(part)) if part.isdigit() else (1, part) for part in parts)
+
+
+def sort_tags(tags: Iterator[str] | list[str] | set[str]) -> list[str]:
+    return sorted(tags, key=tag_sort_key)
+
+
 def iter_card_level_tags(card, *, tag_pattern: Pattern[str] | None = None) -> Iterator[str]:
     for tag in card.note().tags or []:
         if is_level_tag(tag, tag_pattern=tag_pattern):

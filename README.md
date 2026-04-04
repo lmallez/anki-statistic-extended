@@ -2,6 +2,9 @@
 
 This Anki add-on adds Plotly-based charts to Anki's stats view, grouped by tag. The current graphs show:
 
+- unit mastery overview
+- unit mastery score
+- weak units
 - card status distribution by tag
 - today's studied, remaining review, and new-card workload by tag
 

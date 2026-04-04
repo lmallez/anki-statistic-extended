@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from aqt import mw
 
-from ..collection import compiled_tag_filter, current_deck_card_ids, iter_card_level_tags, iter_current_deck_cards
+from ..collection import compiled_tag_filter, current_deck_card_ids, iter_card_level_tags, iter_current_deck_cards, sort_tags
 from .base import PlotlyChart, to_js
 
 
@@ -62,17 +62,9 @@ class DueTodayChart(PlotlyChart[dict[str, dict[str, int]]]):
     def build_render_js(self, data: dict[str, dict[str, int]]) -> str:
         return f"""
 const rows = {to_js(data)};
-const tags = Object.keys(rows)
-  .filter((tag) => (rows[tag].New || 0) + (rows[tag].ReviewRemaining || 0) + (rows[tag].ReviewedToday || 0) > 0)
-  .sort((left, right) => left.localeCompare(right));
+const tags = {to_js(sort_tags(tag for tag, row in data.items() if (row.get("New", 0) + row.get("ReviewRemaining", 0) + row.get("ReviewedToday", 0)) > 0))};
 
 if (!tags.length) return;
-
-const container = document.createElement('div');
-container.id = CONTAINER_ID;
-container.style.maxWidth = '900px';
-container.style.margin = '1.25rem auto 0 auto';
-document.body.prepend(container);
 
 const reviewedY = tags.map((tag) => rows[tag].ReviewedToday || 0);
 const remainingY = tags.map((tag) => rows[tag].ReviewRemaining || 0);
@@ -87,6 +79,7 @@ const dataArr = [
 Plotly.newPlot(container, dataArr, {{
   barmode: 'stack',
   title: 'Today by Tag',
+  height: 320,
   margin: {{ t: 50, l: 40, r: 20, b: 120 }},
   xaxis: {{ tickangle: -90 }},
 }}, {{ displayModeBar: false }});
