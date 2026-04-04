@@ -48,7 +48,9 @@ def sort_tags(tags: Iterator[str] | list[str] | set[str]) -> list[str]:
     return sorted(tags, key=tag_sort_key)
 
 
-def iter_card_level_tags(card, *, tag_pattern: Pattern[str] | None = None) -> Iterator[str]:
+def iter_card_level_tags(
+    card, *, tag_pattern: Pattern[str] | None = None
+) -> Iterator[str]:
     for tag in card.note().tags or []:
         if is_level_tag(tag, tag_pattern=tag_pattern):
             yield tag

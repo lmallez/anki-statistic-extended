@@ -2,7 +2,6 @@
 
 This Anki add-on adds Plotly-based charts to Anki's stats view, grouped by tag. The current graphs show:
 
-- unit mastery overview
 - unit mastery score
 - weak units
 - card status distribution by tag
@@ -17,7 +16,35 @@ Tech: Python, Anki hooks, Plotly.js
 Build and install into your local `addons21` folder:
 
 ```bash
-./install.sh
+make install
+```
+
+## Formatting
+
+This repo uses `black` for Python formatting.
+
+Check formatting:
+
+```bash
+make lint
+```
+
+Format the repo:
+
+```bash
+make format
+```
+
+Build the add-on archive only:
+
+```bash
+make build
+```
+
+Run a quick Python syntax check:
+
+```bash
+make check
 ```
 
 ## Architecture

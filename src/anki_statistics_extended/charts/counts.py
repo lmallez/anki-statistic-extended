@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from ..collection import STATUS_COLORS, STATUS_ORDER, card_status, compiled_tag_filter, iter_card_level_tags, sort_tags
+from ..collection import (
+    STATUS_COLORS,
+    STATUS_ORDER,
+    card_status,
+    compiled_tag_filter,
+    iter_card_level_tags,
+    sort_tags,
+)
 from .base import PlotlyChart, to_js
 
 

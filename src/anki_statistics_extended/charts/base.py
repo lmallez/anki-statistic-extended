@@ -14,7 +14,9 @@ def to_js(value: object) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def wrap_plotly_chart_script(*, container_id: str, panel_order: int, render_js: str) -> str:
+def wrap_plotly_chart_script(
+    *, container_id: str, panel_order: int, render_js: str
+) -> str:
     render_block = textwrap.indent(render_js.strip(), "    ")
     plotly_src = plotly_asset_url()
 

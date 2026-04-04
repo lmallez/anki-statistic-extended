@@ -144,7 +144,11 @@ class UnitMasteryOverviewChart(PlotlyChart[UnitMetrics]):
         tags = [
             tag
             for tag in sort_tags(data.keys())
-            if sum(int(data[tag][status]) for status in ("New", "Learning", "Relearning", "Young", "Mature")) > 0
+            if sum(
+                int(data[tag][status])
+                for status in ("New", "Learning", "Relearning", "Young", "Mature")
+            )
+            > 0
         ]
 
         return f"""

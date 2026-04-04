@@ -4,7 +4,13 @@ from collections import defaultdict
 
 from aqt import mw
 
-from ..collection import compiled_tag_filter, current_deck_card_ids, iter_card_level_tags, iter_current_deck_cards, sort_tags
+from ..collection import (
+    compiled_tag_filter,
+    current_deck_card_ids,
+    iter_card_level_tags,
+    iter_current_deck_cards,
+    sort_tags,
+)
 from .base import PlotlyChart, to_js
 
 
@@ -14,7 +20,9 @@ class DueTodayChart(PlotlyChart[dict[str, dict[str, int]]]):
     container_id = "anki-tag-due-plotly"
 
     def build_data(self) -> dict[str, dict[str, int]]:
-        counts = defaultdict(lambda: {"ReviewedToday": 0, "ReviewRemaining": 0, "New": 0})
+        counts = defaultdict(
+            lambda: {"ReviewedToday": 0, "ReviewRemaining": 0, "New": 0}
+        )
         tag_pattern = compiled_tag_filter()
 
         try:
