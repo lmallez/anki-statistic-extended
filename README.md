@@ -47,6 +47,35 @@ Run a quick Python syntax check:
 make check
 ```
 
+## Configuration
+
+The add-on supports a global tag regex and optional deck-specific overrides.
+
+Example config:
+
+```json
+{
+  "tag_filter_regex": "^EXAMPLE::",
+  "tag_filter_regex_by_deck": {
+    "Deck::Example 1A": "^EXAMPLE::1A::",
+    "Deck::Example 2A": "^EXAMPLE::2A::"
+  }
+}
+```
+
+Resolution order is:
+
+- exact current deck name
+- parent decks of the current deck, from most specific to least specific
+- global `tag_filter_regex`
+
+So if your current deck is `Deck::Example 1A::Lesson 03`, the add-on will try:
+
+- `Deck::Example 1A::Lesson 03`
+- `Deck::Example 1A`
+- `Deck`
+- global `tag_filter_regex`
+
 ## Architecture
 
 The add-on is organized around a small chart registry:

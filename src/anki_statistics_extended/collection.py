@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
+from functools import lru_cache
 from typing import Pattern
 
 from aqt import mw
 
-from .runtime import addon_config
+from .runtime import addon_config, current_deck_name, deck_name_candidates
 
 STATUS_ORDER = (
     "Suspended",
@@ -27,9 +28,29 @@ STATUS_COLORS = {
 }
 
 
-def compiled_tag_filter() -> Pattern[str] | None:
-    pattern = addon_config().get("tag_filter_regex")
-    return re.compile(pattern) if pattern else None
+@lru_cache(maxsize=None)
+def _compile_pattern(pattern: str) -> Pattern[str]:
+    return re.compile(pattern)
+
+
+def configured_tag_filter_regex(deck_name: str | None = None) -> str | None:
+    config = addon_config()
+    regex_by_deck = config.get("tag_filter_regex_by_deck") or {}
+    active_deck_name = current_deck_name() if deck_name is None else deck_name
+
+    if isinstance(regex_by_deck, dict):
+        for candidate in deck_name_candidates(active_deck_name):
+            pattern = regex_by_deck.get(candidate)
+            if pattern:
+                return pattern
+
+    pattern = config.get("tag_filter_regex")
+    return pattern or None
+
+
+def compiled_tag_filter(deck_name: str | None = None) -> Pattern[str] | None:
+    pattern = configured_tag_filter_regex(deck_name=deck_name)
+    return _compile_pattern(pattern) if pattern else None
 
 
 def is_level_tag(tag: str, *, tag_pattern: Pattern[str] | None = None) -> bool:
