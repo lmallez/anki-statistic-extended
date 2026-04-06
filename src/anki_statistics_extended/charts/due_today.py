@@ -21,25 +21,23 @@ class DueTodayChart(PlotlyChart[dict[str, dict[str, int]]]):
 
     def build_data(self) -> dict[str, dict[str, int]]:
         counts = defaultdict(
-            lambda: {"ReviewedToday": 0, "ReviewRemaining": 0, "New": 0}
+            lambda: {"CompletedToday": 0, "ReviewRemaining": 0, "NewQueue": 0}
         )
         tag_pattern = compiled_tag_filter()
 
-        try:
-            remaining_new = int(mw.col.sched.counts()[0])
-        except Exception:
-            remaining_new = 10**9
+        new_queue_cards = list(
+            iter_current_deck_cards("deck:current is:new -is:suspended -is:buried")
+        )
+        new_queue_ids = {card.id for card in new_queue_cards}
 
-        new_cards = list(iter_current_deck_cards("deck:current is:new"))
-        new_cards.sort(key=lambda card: getattr(card, "due", 0) or 0)
-        if remaining_new < len(new_cards):
-            new_cards = new_cards[: max(0, remaining_new)]
-
-        for card in new_cards:
+        for card in new_queue_cards:
             for tag in iter_card_level_tags(card, tag_pattern=tag_pattern):
-                counts[tag]["New"] += 1
+                counts[tag]["NewQueue"] += 1
 
-        for card in iter_current_deck_cards("deck:current is:due -is:new"):
+        review_remaining_cards = list(iter_current_deck_cards("deck:current is:due -is:new"))
+        review_remaining_ids = {card.id for card in review_remaining_cards}
+
+        for card in review_remaining_cards:
             for tag in iter_card_level_tags(card, tag_pattern=tag_pattern):
                 counts[tag]["ReviewRemaining"] += 1
 
@@ -57,11 +55,12 @@ class DueTodayChart(PlotlyChart[dict[str, dict[str, int]]]):
                 )
             }
             reviewed_card_ids &= current_deck_card_ids()
+            completed_card_ids = reviewed_card_ids - review_remaining_ids - new_queue_ids
 
-            for card_id in reviewed_card_ids:
+            for card_id in completed_card_ids:
                 card = mw.col.get_card(card_id)
                 for tag in iter_card_level_tags(card, tag_pattern=tag_pattern):
-                    counts[tag]["ReviewedToday"] += 1
+                    counts[tag]["CompletedToday"] += 1
         except Exception:
             pass
 
@@ -70,23 +69,23 @@ class DueTodayChart(PlotlyChart[dict[str, dict[str, int]]]):
     def build_render_js(self, data: dict[str, dict[str, int]]) -> str:
         return f"""
 const rows = {to_js(data)};
-const tags = {to_js(sort_tags(tag for tag, row in data.items() if (row.get("New", 0) + row.get("ReviewRemaining", 0) + row.get("ReviewedToday", 0)) > 0))};
+const tags = {to_js(sort_tags(tag for tag, row in data.items() if (row.get("NewQueue", 0) + row.get("ReviewRemaining", 0) + row.get("CompletedToday", 0)) > 0))};
 
 if (!tags.length) return;
 
-const reviewedY = tags.map((tag) => rows[tag].ReviewedToday || 0);
+const completedY = tags.map((tag) => rows[tag].CompletedToday || 0);
 const remainingY = tags.map((tag) => rows[tag].ReviewRemaining || 0);
-const newY = tags.map((tag) => rows[tag].New || 0);
+const newQueueY = tags.map((tag) => rows[tag].NewQueue || 0);
 
 const dataArr = [
-  {{ type: 'bar', x: tags, y: reviewedY, name: 'ReviewedToday', marker: {{ color: '#2ca02c' }} }},
-  {{ type: 'bar', x: tags, y: remainingY, name: 'ReviewRemaining', marker: {{ color: '#1f3b87' }} }},
-  {{ type: 'bar', x: tags, y: newY, name: 'New', marker: {{ color: '#1f77b4' }} }},
+  {{ type: 'bar', x: tags, y: completedY, name: 'Completed Today', marker: {{ color: '#2ca02c' }} }},
+  {{ type: 'bar', x: tags, y: remainingY, name: 'Review Remaining', marker: {{ color: '#1f3b87' }} }},
+  {{ type: 'bar', x: tags, y: newQueueY, name: 'New Queue', marker: {{ color: '#1f77b4' }} }},
 ];
 
 Plotly.newPlot(container, dataArr, {{
   barmode: 'stack',
-  title: 'Today by Tag',
+  title: 'Activity by Tag',
   height: 320,
   margin: {{ t: 50, l: 40, r: 20, b: 120 }},
   xaxis: {{ tickangle: -90 }},
@@ -97,14 +96,14 @@ container.on('plotly_click', function(eventData) {{
   const tag = point.x;
   const series = point.data && point.data.name ? point.data.name : '';
 
-  if (series === 'New') {{
-    window.pycmd('browser?search=' + encodeURIComponent(`deck:current tag:"${{tag}}" is:new`));
-  }} else if (series === 'ReviewRemaining') {{
+  if (series === 'New Queue') {{
+    window.pycmd('browser?search=' + encodeURIComponent(`deck:current tag:"${{tag}}" is:new -is:suspended -is:buried`));
+  }} else if (series === 'Review Remaining') {{
     window.pycmd('browser?search=' + encodeURIComponent(`deck:current tag:"${{tag}}" is:due -is:new`));
-  }} else if (series === 'ReviewedToday') {{
-    window.pycmd('browser?search=' + encodeURIComponent(`deck:current tag:"${{tag}}" rated:1`));
+  }} else if (series === 'Completed Today') {{
+    window.pycmd('browser?search=' + encodeURIComponent(`deck:current tag:"${{tag}}" rated:1 -is:due -is:new`));
   }} else {{
-    window.pycmd('browser?search=' + encodeURIComponent(`deck:current tag:"${{tag}}" (rated:1 OR is:due -is:new OR is:new)`));
+    window.pycmd('browser?search=' + encodeURIComponent(`deck:current tag:"${{tag}}" (rated:1 -is:due -is:new OR is:due -is:new OR is:new -is:suspended -is:buried)`));
   }}
 }});
 """

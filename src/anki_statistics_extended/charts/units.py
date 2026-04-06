@@ -201,7 +201,10 @@ if (!tags.length) return;
 
 const y = tags.map((tag) => rows[tag].MasteryPct || 0);
 const text = tags.map((tag) => `${{rows[tag].MasteryPct || 0}}%`);
-const customdata = tags.map((tag) => [rows[tag].Mature || 0, rows[tag].Active || 0]);
+const hovertext = tags.map(
+  (tag) =>
+    `Unit ${{tag}}<br>Mastery ${{rows[tag].MasteryPct || 0}}%<br>Mature ${{rows[tag].Mature || 0}} / Active ${{rows[tag].Active || 0}}<br>Suspended ${{rows[tag].Suspended || 0}}`
+);
 
 Plotly.newPlot(container, [{{
   type: 'bar',
@@ -209,7 +212,7 @@ Plotly.newPlot(container, [{{
   y,
   text,
   textposition: 'outside',
-  customdata,
+  hovertext,
   marker: {{
     color: y,
     colorscale: [
@@ -220,7 +223,7 @@ Plotly.newPlot(container, [{{
     cmin: 0,
     cmax: 100
   }},
-  hovertemplate: 'Unit %{{x}}<br>Mastery %{{y:.1f}}%<br>Mature %{{customdata[0]}} / Active %{{customdata[1]}}<extra></extra>',
+  hovertemplate: '%{{hovertext}}<extra></extra>',
 }}], {{
   title: 'Unit Mastery Score',
   height: 320,
@@ -253,20 +256,18 @@ const tags = {to_js(tags)};
 if (!tags.length) return;
 
 const y = tags.map((tag) => rows[tag].WeaknessPct || 0);
-const customdata = tags.map((tag) => [
-  rows[tag].Unstable || 0,
-  rows[tag].Learning || 0,
-  rows[tag].Relearning || 0,
-  rows[tag].RecentAgain || 0,
-  rows[tag].Active || 0,
-]);
+const hovertext = tags.map(
+  (tag) =>
+    `Unit ${{tag}}<br>Weakness ${{rows[tag].WeaknessPct || 0}}%<br>Unstable Cards ${{rows[tag].Unstable || 0}}<br>Learning ${{rows[tag].Learning || 0}}<br>Relearning ${{rows[tag].Relearning || 0}}<br>Recent Again (14d) ${{rows[tag].RecentAgain || 0}}<br>Active ${{rows[tag].Active || 0}}`
+);
 
 Plotly.newPlot(container, [{{
   type: 'bar',
   x: tags,
   y,
+  hovertext,
   marker: {{ color: '#C94B4B' }},
-  hovertemplate: 'Unit %{{x}}<br>Weakness %{{y:.1f}}%<br>Unstable Cards %{{customdata[0]}}<br>Learning %{{customdata[1]}}<br>Relearning %{{customdata[2]}}<br>Recent Again (14d) %{{customdata[3]}}<br>Active %{{customdata[4]}}<extra></extra>',
+  hovertemplate: '%{{hovertext}}<extra></extra>',
 }}], {{
   title: 'Weak Units',
   height: 320,
