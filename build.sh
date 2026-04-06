@@ -5,6 +5,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLOTLY_PATH="$REPO_ROOT/src/anki_statistics_extended/web/plotly.min.js"
 ARCHIVE_PATH="$REPO_ROOT/dist/anki_statistics_extended.ankiaddon"
 BUILD_DIR="$(mktemp -d)"
+RAW_VERSION="${VERSION:-dev}"
+VERSION_VALUE="${RAW_VERSION#v}"
 
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -25,24 +27,19 @@ else
   python3 "$REPO_ROOT/download_deps.py"
 fi
 
-# Build from a temporary copy so CI can override the manifest version safely.
+# Build from a temporary copy so the placeholder version is always resolved.
 cp -R "$REPO_ROOT/src/anki_statistics_extended/." "$BUILD_DIR/"
-
-if [[ -n "${ANKI_ADDON_VERSION:-}" ]]; then
-  echo "🏷️ Setting manifest version to $ANKI_ADDON_VERSION..."
-  python3 - "$BUILD_DIR/manifest.json" "$ANKI_ADDON_VERSION" <<'PY'
-import json
-import pathlib
+python3 - "$BUILD_DIR/manifest.json" "$VERSION_VALUE" <<'PY'
+from pathlib import Path
 import sys
 
-manifest_path = pathlib.Path(sys.argv[1])
-version = sys.argv[2]
-
-manifest = json.loads(manifest_path.read_text())
-manifest["version"] = version
-manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+manifest_path = Path(sys.argv[1])
+manifest_path.write_text(
+    manifest_path.read_text().replace("${VERSION}", sys.argv[2])
+)
 PY
-fi
+
+echo "Version: $VERSION_VALUE"
 
 cd "$BUILD_DIR"
 rm -f "$ARCHIVE_PATH"

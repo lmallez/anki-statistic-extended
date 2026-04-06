@@ -18,7 +18,9 @@ jobs:
           python-version: '3.9'
 
       - name: Zip Add-on
-        run: ANKI_ADDON_VERSION="${GITHUB_REF_NAME#v}" ./build.sh
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: ./build.sh
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

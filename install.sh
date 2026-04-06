@@ -4,6 +4,14 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_DIR="$REPO_ROOT/src/anki_statistics_extended"
 MANIFEST_PATH="$SRC_DIR/manifest.json"
+ARCHIVE_PATH="$REPO_ROOT/dist/anki_statistics_extended.ankiaddon"
+INSTALL_DIR="$(mktemp -d)"
+
+cleanup() {
+  rm -rf "$INSTALL_DIR"
+}
+
+trap cleanup EXIT
 
 if [[ ! -f "$MANIFEST_PATH" ]]; then
   echo "manifest.json not found at $MANIFEST_PATH" >&2
@@ -33,11 +41,13 @@ TARGET_DIR="$ADDONS_DIR/$PACKAGE_NAME"
 
 echo "Installing add-on into $TARGET_DIR"
 mkdir -p "$TARGET_DIR"
+unzip -oq "$ARCHIVE_PATH" -d "$INSTALL_DIR"
+
 rsync -a --delete \
   --exclude "meta.json" \
   --exclude "__pycache__/" \
   --exclude "*.pyc" \
-  "$SRC_DIR/" "$TARGET_DIR/"
+  "$INSTALL_DIR/" "$TARGET_DIR/"
 
 echo "Install complete."
 echo "Addon dir: $TARGET_DIR"
