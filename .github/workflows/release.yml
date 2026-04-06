@@ -28,3 +28,15 @@ jobs:
           files: dist/anki_statistics_extended.ankiaddon
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to AnkiWeb
+        uses: lmallez/anki-addon-publish-action@main
+        with:
+          file: dist/anki_statistics_extended.ankiaddon
+          anki-user: ${{ secrets.ANKI_USER }}
+          anki-password: ${{ secrets.ANKI_PASSWORD }}
+          id: 1388408398
+          name: Anki Statistics Extended
+          support-page: https://github.com/lmallez/anki-statistic-extended
+          tags: anki,statistics
+          description: Adds polished Plotly-based charts to Anki's stats screen for tag and unit progress tracking.
