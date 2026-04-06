@@ -5,7 +5,7 @@ import traceback
 from aqt.gui_hooks import stats_dialog_will_show
 from aqt.qt import QTimer
 
-from .charts import get_charts
+from .charts import clear_chart_caches, get_charts
 
 MAX_INJECT_ATTEMPTS = 30
 RETRY_DELAY_MS = 200
@@ -15,10 +15,11 @@ _registered = False
 
 def _log_chart_failure(chart_key: str, stage: str) -> None:
     print(f"[anki-statistics-extended] Failed to {stage} chart '{chart_key}'")
-    traceback.print_exc()
+    print(traceback.format_exc())
 
 
 def inject_charts(web) -> None:
+    clear_chart_caches()
     for chart in get_charts():
         try:
             chart_js = chart.build_script()

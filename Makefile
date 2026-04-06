@@ -1,4 +1,4 @@
-PYTHON ?= python3
+PYTHON ?= $(shell if [ -x ./.venv/bin/python ]; then printf '%s' ./.venv/bin/python; else printf '%s' python3; fi)
 PACKAGE := src/anki_statistics_extended
 PYTHON_SOURCES := $(shell find src -name '*.py' | sort)
 

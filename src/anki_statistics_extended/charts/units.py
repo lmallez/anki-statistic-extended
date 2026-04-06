@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from functools import lru_cache
 from typing import Dict, Union
 
 from aqt import mw
@@ -44,6 +45,11 @@ def _empty_unit_record() -> Dict[str, UnitMetricValue]:
 
 
 def build_unit_metrics() -> UnitMetrics:
+    return _build_unit_metrics()
+
+
+@lru_cache(maxsize=1)
+def _build_unit_metrics() -> UnitMetrics:
     metrics = defaultdict(_empty_unit_record)
     weak_card_ids_by_unit = defaultdict(set)
     tag_pattern = compiled_tag_filter()
@@ -66,7 +72,9 @@ def build_unit_metrics() -> UnitMetrics:
     except Exception:
         remaining_new = 10**9
 
-    new_cards = list(iter_current_deck_cards("deck:current is:new"))
+    new_cards = list(
+        iter_current_deck_cards("deck:current is:new -is:suspended -is:buried")
+    )
     new_cards.sort(key=lambda card: getattr(card, "due", 0) or 0)
     if remaining_new < len(new_cards):
         new_cards = new_cards[: max(0, remaining_new)]
@@ -130,6 +138,10 @@ def build_unit_metrics() -> UnitMetrics:
         record["WeaknessPct"] = round((unstable / active) * 100, 1) if active else 0.0
 
     return dict(metrics)
+
+
+def clear_unit_metrics_cache() -> None:
+    _build_unit_metrics.cache_clear()
 
 
 class UnitMasteryOverviewChart(PlotlyChart[UnitMetrics]):

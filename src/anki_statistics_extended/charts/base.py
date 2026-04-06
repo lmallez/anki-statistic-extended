@@ -27,6 +27,7 @@ def wrap_plotly_chart_script(
   const ROOT_ID = 'anki-stats-extended-root';
   const GRID_ID = 'anki-stats-extended-grid';
   const STYLE_ID = 'anki-stats-extended-grid-style';
+  const PLOTLY_SCRIPT_ATTR = 'data-anki-stats-extended-plotly';
   const existingPanel = document.getElementById(PANEL_ID);
   if (existingPanel) existingPanel.remove();
 
@@ -113,13 +114,47 @@ def wrap_plotly_chart_script(
 {render_block}
   }}
 
+  function queueDrawUntilPlotlyLoads() {{
+    window.__ankiStatsExtendedPlotlyQueue = window.__ankiStatsExtendedPlotlyQueue || [];
+    window.__ankiStatsExtendedPlotlyQueue.push(draw);
+
+    if (window.__ankiStatsExtendedPlotlyLoading) {{
+      return;
+    }}
+
+    window.__ankiStatsExtendedPlotlyLoading = true;
+
+    const flushQueue = () => {{
+      const queue = window.__ankiStatsExtendedPlotlyQueue || [];
+      window.__ankiStatsExtendedPlotlyQueue = [];
+      window.__ankiStatsExtendedPlotlyLoading = false;
+      queue.forEach((callback) => callback());
+    }};
+
+    const existingScript = document.querySelector(`script[${{PLOTLY_SCRIPT_ATTR}}="1"]`);
+    if (existingScript) {{
+      existingScript.addEventListener('load', flushQueue, {{ once: true }});
+      existingScript.addEventListener('error', () => {{
+        window.__ankiStatsExtendedPlotlyLoading = false;
+      }}, {{ once: true }});
+      return;
+    }}
+
+    const script = document.createElement('script');
+    script.setAttribute(PLOTLY_SCRIPT_ATTR, '1');
+    script.src = {to_js(plotly_src)};
+    script.onload = flushQueue;
+    script.onerror = () => {{
+      window.__ankiStatsExtendedPlotlyLoading = false;
+      console.error('Failed to load Plotly for Anki Statistics Extended');
+    }};
+    document.head.appendChild(script);
+  }}
+
   if (window.Plotly) {{
     draw();
   }} else {{
-    const script = document.createElement('script');
-    script.src = {to_js(plotly_src)};
-    script.onload = draw;
-    document.head.appendChild(script);
+    queueDrawUntilPlotlyLoads();
   }}
 }})();"""
 

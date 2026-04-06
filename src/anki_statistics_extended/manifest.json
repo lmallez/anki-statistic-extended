@@ -1,6 +1,7 @@
 {
-  "package": "anki-statistics-extended",
+  "package": "anki_statistics_extended",
   "name": "Anki Statistics Extended",
   "author": "Louis Mallez",
-  "version": "${VERSION}"
+  "version": "0.1.0",
+  "mod": 0
 }

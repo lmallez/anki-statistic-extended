@@ -5,19 +5,22 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
-      - name: Zip Add-on
+      - name: Build add-on
         env:
           VERSION: ${{ github.ref_name }}
         run: ./build.sh
@@ -25,18 +28,21 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
           files: dist/anki_statistics_extended.ankiaddon
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload to AnkiWeb
-        uses: lmallez/anki-addon-publish-action@main
+        uses: lmallez/anki-addon-publish-action@v0.1.0
         with:
           file: dist/anki_statistics_extended.ankiaddon
           anki-user: ${{ secrets.ANKI_USER }}
           anki-password: ${{ secrets.ANKI_PASSWORD }}
-          id: 1388408398
+          id: ${{ vars.ANKI_ADDON_ID }}
           name: Anki Statistics Extended
           support-page: https://github.com/lmallez/anki-statistic-extended
-          tags: anki,statistics
+          tags: statistics
           description: Adds polished Plotly-based charts to Anki's stats screen for tag and unit progress tracking.

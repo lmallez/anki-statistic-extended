@@ -1,55 +1,26 @@
 # Anki Statistics Extended
 
-This Anki add-on adds Plotly-based charts to Anki's stats view, grouped by tag. The current graphs show:
+Anki add-on that adds tag-based charts to the statistics screen.
 
-- unit mastery score
-- weak units
-- card status distribution by tag
-- today's studied, remaining review, and new-card workload by tag
+[Download on AnkiWeb](https://ankiweb.net/shared/info/98537397)  
+[Report an issue](https://github.com/lmallez/anki-statistic-extended/issues)
 
-Tech: Python, Anki hooks, Plotly.js
+## Features
 
-[Download on AnkiWeb](https://ankiweb.net/shared/info/1388408398)
+- 📈 Unit mastery score
+- ⚠️ Weak units overview
+- 🗂️ Card status distribution by tag
+- 📚 Today's studied, remaining review, and new-card workload by tag
 
-## Local install
+Charts are rendered with Plotly and bundled in release packages, so the add-on does not depend on a third-party CDN at runtime.
 
-Build and install into your local `addons21` folder:
+## Installation
 
-```bash
-make install
-```
-
-## Formatting
-
-This repo uses `black` for Python formatting.
-
-Check formatting:
-
-```bash
-make lint
-```
-
-Format the repo:
-
-```bash
-make format
-```
-
-Build the add-on archive only:
-
-```bash
-make build
-```
-
-Run a quick Python syntax check:
-
-```bash
-make check
-```
+Install from [AnkiWeb](https://ankiweb.net/shared/info/98537397). 🚀
 
 ## Configuration
 
-The add-on supports a global tag regex and optional deck-specific overrides.
+The add-on supports a global tag regex and optional deck-specific overrides. The same configuration help is also available inside Anki through the add-on config editor.
 
 Example config:
 
@@ -63,33 +34,17 @@ Example config:
 }
 ```
 
-Resolution order is:
+Regex lookup order:
 
-- exact current deck name
-- parent decks of the current deck, from most specific to least specific
-- global `tag_filter_regex`
+- 1️⃣ Exact current deck name
+- 2️⃣ Parent decks, from most specific to least specific
+- 3️⃣ Global `tag_filter_regex`
 
-So if your current deck is `Deck::Example 1A::Lesson 03`, the add-on will try:
+For a current deck named `Deck::Example 1A::Lesson 03`, the add-on tries:
 
 - `Deck::Example 1A::Lesson 03`
 - `Deck::Example 1A`
 - `Deck`
 - global `tag_filter_regex`
 
-## Architecture
-
-The add-on is organized around a small chart registry:
-
-- `stats.py` wires into Anki's stats dialog and injects all registered charts
-- `charts/base.py` provides the base chart abstractions
-- `charts/registry.py` is the single place where available charts are registered
-- each file in `charts/` owns one graph's data collection and Plotly rendering
-- `collection.py` contains shared Anki collection helpers and card-status logic
-
-## Adding a graph
-
-1. Create a new chart module in `src/anki_statistics_extended/charts/`.
-2. Implement a `PlotlyChart` subclass with `build_data()` and `build_render_js()`.
-3. Register the chart in `src/anki_statistics_extended/charts/registry.py`.
-
-With that in place, the graph will automatically be injected into the stats screen.
+If a regex is invalid, the add-on ignores it and falls back to showing all tags instead of failing to render charts.

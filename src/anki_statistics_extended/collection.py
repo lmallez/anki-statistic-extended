@@ -29,8 +29,15 @@ STATUS_COLORS = {
 
 
 @lru_cache(maxsize=None)
-def _compile_pattern(pattern: str) -> Pattern[str]:
-    return re.compile(pattern)
+def _compile_pattern(pattern: str) -> Pattern[str] | None:
+    try:
+        return re.compile(pattern)
+    except re.error as exc:
+        print(
+            "[anki-statistics-extended] Ignoring invalid tag filter regex "
+            f"{pattern!r}: {exc}"
+        )
+        return None
 
 
 def configured_tag_filter_regex(deck_name: str | None = None) -> str | None:
