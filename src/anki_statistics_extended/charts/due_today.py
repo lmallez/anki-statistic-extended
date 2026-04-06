@@ -34,7 +34,9 @@ class DueTodayChart(PlotlyChart[dict[str, dict[str, int]]]):
             for tag in iter_card_level_tags(card, tag_pattern=tag_pattern):
                 counts[tag]["NewQueue"] += 1
 
-        review_remaining_cards = list(iter_current_deck_cards("deck:current is:due -is:new"))
+        review_remaining_cards = list(
+            iter_current_deck_cards("deck:current is:due -is:new")
+        )
         review_remaining_ids = {card.id for card in review_remaining_cards}
 
         for card in review_remaining_cards:
@@ -55,7 +57,9 @@ class DueTodayChart(PlotlyChart[dict[str, dict[str, int]]]):
                 )
             }
             reviewed_card_ids &= current_deck_card_ids()
-            completed_card_ids = reviewed_card_ids - review_remaining_ids - new_queue_ids
+            completed_card_ids = (
+                reviewed_card_ids - review_remaining_ids - new_queue_ids
+            )
 
             for card_id in completed_card_ids:
                 card = mw.col.get_card(card_id)
