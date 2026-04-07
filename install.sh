@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ $# -ne 1 || -z "${1:-}" ]]; then
+  echo "Usage: ./install.sh <version>" >&2
+  exit 1
+fi
+
+VERSION_VALUE="$1"
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_DIR="$REPO_ROOT/src/anki_statistics_extended"
 MANIFEST_PATH="$SRC_DIR/manifest.json"
@@ -37,7 +44,7 @@ fi
 
 TARGET_DIR="$ADDONS_DIR/$PACKAGE_NAME"
 
-"$REPO_ROOT/build.sh"
+"$REPO_ROOT/build.sh" "$VERSION_VALUE"
 
 echo "Installing add-on into $TARGET_DIR"
 mkdir -p "$TARGET_DIR"

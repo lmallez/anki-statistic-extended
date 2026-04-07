@@ -21,9 +21,7 @@ jobs:
           python-version: '3.9'
 
       - name: Build add-on
-        env:
-          VERSION: ${{ github.ref_name }}
-        run: ./build.sh
+        run: ./build.sh "${GITHUB_REF_NAME#v}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -42,7 +40,7 @@ jobs:
           anki-user: ${{ secrets.ANKI_USER }}
           anki-password: ${{ secrets.ANKI_PASSWORD }}
           id: ${{ vars.ANKI_ADDON_ID }}
-          name: Anki Statistics Extended
-          support-page: https://github.com/lmallez/anki-statistic-extended
+          name: "📊 Anki Statistics Extended"
+          support-page: https://github.com/${{ github.repository }}
           tags: statistics
           description-file: src/anki_statistics_extended/README.md

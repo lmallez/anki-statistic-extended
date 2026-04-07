@@ -4,21 +4,23 @@ PYTHON_SOURCES := $(shell find src -name '*.py' | sort)
 
 .PHONY: help build install lint format check clean
 
+DEV_VERSION := 0.0.0-dev.$(shell date -u +%Y%m%d%H%M%S)
+
 help:
 	@printf '%s\n' \
 		'Available targets:' \
-		'  make build    Build the .ankiaddon archive' \
-		'  make install  Build and install into your local Anki addons21 folder' \
+		'  make build    Build the .ankiaddon archive (override with VERSION=x.y.z)' \
+		'  make install  Build and install into your local Anki addons21 folder (override with VERSION=x.y.z)' \
 		'  make lint     Run black in check mode' \
 		'  make format   Format Python files with black' \
 		'  make check    Compile Python sources to catch syntax errors' \
 		'  make clean    Remove build artifacts and local caches'
 
 build:
-	./build.sh
+	./build.sh "$(or $(VERSION),$(DEV_VERSION))"
 
 install:
-	./install.sh
+	./install.sh "$(or $(VERSION),$(DEV_VERSION))"
 
 lint:
 	$(PYTHON) -m black --check src

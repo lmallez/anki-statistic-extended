@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ $# -ne 1 || -z "${1:-}" ]]; then
+  echo "Usage: ./build.sh <version>" >&2
+  exit 1
+fi
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLOTLY_PATH="$REPO_ROOT/src/anki_statistics_extended/web/plotly.min.js"
 ARCHIVE_PATH="$REPO_ROOT/dist/anki_statistics_extended.ankiaddon"
 BUILD_DIR="$(mktemp -d)"
-DEFAULT_VERSION="$(
-  python3 -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["version"])' \
-    "$REPO_ROOT/src/anki_statistics_extended/manifest.json"
-)"
-
-RAW_VERSION="${VERSION:-$DEFAULT_VERSION}"
+RAW_VERSION="$1"
 VERSION_VALUE="${RAW_VERSION#v}"
 MOD_VALUE="$(date -u +%s)"
 
@@ -38,21 +38,17 @@ else
   python3 "$REPO_ROOT/download_deps.py"
 fi
 
-# Build from a temporary copy so the placeholder version is always resolved.
+# Build from a temporary copy so the manifest placeholders are always resolved.
 cp -R "$REPO_ROOT/src/anki_statistics_extended/." "$BUILD_DIR/"
 python3 - "$BUILD_DIR/manifest.json" "$VERSION_VALUE" "$MOD_VALUE" <<'PY'
-import json
 import sys
 from pathlib import Path
 
 manifest_path = Path(sys.argv[1])
-manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-manifest["version"] = sys.argv[2]
-manifest["mod"] = int(sys.argv[3])
-manifest_path.write_text(
-    json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
-    encoding="utf-8",
-)
+manifest_text = manifest_path.read_text(encoding="utf-8")
+manifest_text = manifest_text.replace("${VERSION}", sys.argv[2])
+manifest_text = manifest_text.replace('"${MOD}"', sys.argv[3])
+manifest_path.write_text(manifest_text, encoding="utf-8")
 PY
 
 echo "Version: $VERSION_VALUE"
